@@ -4,7 +4,7 @@ import type { PaymentStatus } from "@prisma/client";
 
 export const runtime = "nodejs";
 
-function serializePlan(plan: Awaited<ReturnType<typeof prisma.weddingPlan.findMany>>[number]) {
+function serializePlan(plan: any) {
   return {
     ...plan,
     budget: Number(plan.budget),
