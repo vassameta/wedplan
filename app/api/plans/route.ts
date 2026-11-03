@@ -8,11 +8,11 @@ function serializePlan(plan: any) {
   return {
     ...plan,
     budget: Number(plan.budget),
-    items: plan.items.map(item => ({
+    items: plan.items.map((item: any) => ({
       ...item,
       planned: Number(item.planned),
       actual: Number(item.actual),
-      paymentStatus: ({ UNPAID: "Belum dibayar", DEPOSIT: "DP", PAID: "Lunas" } as const)[item.paymentStatus]
+      paymentStatus: ({ UNPAID: "Belum dibayar", DEPOSIT: "DP", PAID: "Lunas" } as Record<PaymentStatus, string>)[item.paymentStatus as PaymentStatus]
     }))
   };
 }
