@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { FormEvent, ReactNode } from "react";
 import {
   ArrowDownToLine, ArrowUpRight, CalendarDays, Check, ChevronDown, ChevronLeft,
   ChevronRight, CircleDollarSign, ClipboardList, Download, Heart, LayoutDashboard,
@@ -158,7 +159,7 @@ function EmptyState({title,body,action}:{title:string;body:string;action:()=>voi
   return <div className="empty-state"><span><Heart size={20}/></span><b>{title}</b><p>{body}</p><button className="text-button" onClick={action}><Plus size={14}/> Add budget item</button></div>;
 }
 
-function ModalShell({title,subtitle,children,onClose}:{title:string;subtitle:string;children:React.ReactNode;onClose:()=>void}) {
+function ModalShell({title,subtitle,children,onClose}:{title:string;subtitle:string;children:ReactNode;onClose:()=>void}) {
   return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)onClose()}}><div className="modal"><div className="modal-heading"><div><span className="eyebrow">WEDPLAN WORKSPACE</span><h2>{title}</h2><p>{subtitle}</p></div><button className="icon-btn" onClick={onClose}><X size={18}/></button></div>{children}</div></div>;
 }
 
@@ -169,7 +170,7 @@ function PlanModal({initial,onClose,onSave}:{initial:WeddingPlan|null;onClose:()
   const [location,setLocation]=useState(initial?.location??"");
   const [budget,setBudget]=useState(String(initial?.budget??100000000));
   const [guests,setGuests]=useState(String(initial?.guestCount??300));
-  function submit(e:React.FormEvent) {
+  function submit(e:FormEvent) {
     e.preventDefault();
     const now=new Date().toISOString();
     onSave({id:initial?.id??crypto.randomUUID(),name,partner,date,location,budget:Math.max(0,Number(budget)||0),guestCount:Math.max(0,Number(guests)||0),items:initial?.items??[],createdAt:initial?.createdAt??now,updatedAt:now});
@@ -180,6 +181,6 @@ function PlanModal({initial,onClose,onSave}:{initial:WeddingPlan|null;onClose:()
 function ItemModal({initial,onClose,onSave}:{initial:BudgetItem|null;onClose:()=>void;onSave:(i:BudgetItem)=>void}) {
   const [item,setItem]=useState<BudgetItem>(initial??blankItem());
   function change<K extends keyof BudgetItem>(key:K,value:BudgetItem[K]) { setItem(old=>({...old,[key]:value})); }
-  function submit(e:React.FormEvent) { e.preventDefault(); if(!item.name.trim())return; onSave({...item,name:item.name.trim(),planned:Math.max(0,Number(item.planned)||0),actual:Math.max(0,Number(item.actual)||0)}); }
+  function submit(e:FormEvent) { e.preventDefault(); if(!item.name.trim())return; onSave({...item,name:item.name.trim(),planned:Math.max(0,Number(item.planned)||0),actual:Math.max(0,Number(item.actual)||0)}); }
   return <ModalShell title={initial?"Edit budget item":"Add a budget item"} subtitle="Capture the estimate now; update the actual cost as plans come together." onClose={onClose}><form onSubmit={submit} className="form-grid"><label className="full-field">Item name<input required value={item.name} onChange={e=>change("name",e.target.value)} placeholder="e.g. Wedding venue"/></label><label>Category<select value={item.category} onChange={e=>change("category",e.target.value)}>{categories.map(c=><option key={c}>{c}</option>)}</select></label><label>Vendor<input value={item.vendor} onChange={e=>change("vendor",e.target.value)} placeholder="Vendor / provider"/></label><label>Planned amount (IDR)<input type="number" min="0" value={item.planned} onChange={e=>change("planned",Number(e.target.value))}/></label><label>Actual amount (IDR)<input type="number" min="0" value={item.actual} onChange={e=>change("actual",Number(e.target.value))}/></label><label>Payment status<select value={item.paymentStatus} onChange={e=>change("paymentStatus",e.target.value as PaymentStatus)}><option>Belum dibayar</option><option>DP</option><option>Lunas</option></select></label><label>Payment due date<input type="date" value={item.dueDate} onChange={e=>change("dueDate",e.target.value)}/></label><label className="full-field">Notes<textarea rows={3} value={item.notes} onChange={e=>change("notes",e.target.value)} placeholder="Details, payment terms, reminders..."/></label><div className="modal-actions full-field"><button type="button" className="button button-soft" onClick={onClose}>Cancel</button><button className="button button-dark" type="submit"><Check size={15}/>{initial?"Save changes":"Add item"}</button></div></form></ModalShell>;
 }
