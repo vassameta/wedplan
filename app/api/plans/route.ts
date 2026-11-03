@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/auth";
-import type { PaymentStatus } from "@prisma/client";
 
 export const runtime = "nodejs";
+
+type DbPaymentStatus = "UNPAID" | "DEPOSIT" | "PAID";
 
 function serializePlan(plan: any) {
   return {
@@ -12,12 +13,12 @@ function serializePlan(plan: any) {
       ...item,
       planned: Number(item.planned),
       actual: Number(item.actual),
-      paymentStatus: ({ UNPAID: "Belum dibayar", DEPOSIT: "DP", PAID: "Lunas" } as Record<PaymentStatus, string>)[item.paymentStatus as PaymentStatus]
+      paymentStatus: ({ UNPAID: "Belum dibayar", DEPOSIT: "DP", PAID: "Lunas" } as Record<DbPaymentStatus, string>)[item.paymentStatus as DbPaymentStatus]
     }))
   };
 }
 
-function mapStatus(value: string): PaymentStatus {
+function mapStatus(value: string): DbPaymentStatus {
   if (value === "Lunas") return "PAID";
   if (value === "DP") return "DEPOSIT";
   return "UNPAID";
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
       budget: Math.max(0, Number(body.budget) || 0),
       guestCount: Math.max(0, Math.floor(Number(body.guestCount) || 0)),
       items: { create: items.map((item: any) => ({
-        id: typeof item.id === "string" ? item.id : crypto.randomUUID(),
+        id: typeof item.id === "string" && item.id ? item.id : crypto.randomUUID(),
         name: String(item.name ?? ""),
         category: String(item.category ?? "Lain-lain"),
         vendor: String(item.vendor ?? ""),
