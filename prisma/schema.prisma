@@ -1,0 +1,45 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PaymentStatus {
+  UNPAID
+  DEPOSIT
+  PAID
+}
+
+model WeddingPlan {
+  id         String       @id @default(cuid())
+  name       String
+  partner    String       @default("")
+  date       String       @default("")
+  location   String       @default("")
+  budget     Decimal      @default(0) @db.Decimal(18, 2)
+  guestCount Int          @default(0)
+  items      BudgetItem[]
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([updatedAt])
+}
+
+model BudgetItem {
+  id            String        @id
+  name          String
+  category      String
+  vendor        String        @default("")
+  planned       Decimal       @default(0) @db.Decimal(18, 2)
+  actual        Decimal       @default(0) @db.Decimal(18, 2)
+  paymentStatus PaymentStatus @default(UNPAID)
+  dueDate       String        @default("")
+  notes         String        @default("")
+  planId        String
+  plan          WeddingPlan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+}
