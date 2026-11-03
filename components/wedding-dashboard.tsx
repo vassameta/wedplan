@@ -5,7 +5,7 @@ import type { FormEvent, ReactNode } from "react";
 import {
   ArrowDownToLine, ArrowUpRight, CalendarDays, Check, ChevronDown, ChevronLeft,
   ChevronRight, CircleDollarSign, ClipboardList, Download, Heart, LayoutDashboard,
-  MapPin, MoreHorizontal, Pencil, Plus, Search, Settings2, Sparkles, Trash2,
+  LogOut, MapPin, MoreHorizontal, Pencil, Plus, Search, Settings2, Sparkles, Trash2,
   TrendingUp, Users, Wallet, X
 } from "lucide-react";
 import { categories } from "@/lib/defaults";
@@ -27,6 +27,11 @@ export default function WeddingDashboard() {
   const [editingItem, setEditingItem] = useState<BudgetItem | null>(null);
   const [menuId, setMenuId] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.assign("/login");
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -114,7 +119,7 @@ export default function WeddingDashboard() {
     try {
       const imported = JSON.parse(await file.text()) as WeddingPlan;
       if (!imported.name || !Array.isArray(imported.items)) throw new Error("Format tidak valid");
-      const copy = { ...imported, id: "", name: imported.name + " (Imported)", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+      const copy = { ...imported, id: "", name: imported.name + " (Imported)", items: imported.items.map(item => ({ ...item, id: crypto.randomUUID() })), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
       const response = await fetch("/api/plans", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(copy) });
       if (!response.ok) throw new Error("Tidak dapat mengimpor plan.");
       const saved = await response.json() as WeddingPlan;
@@ -156,9 +161,9 @@ export default function WeddingDashboard() {
       </aside>
 
       <main className="main-area">
-        <header className="topbar"><div className="breadcrumb">Workspace <ChevronRight size={14}/> <b>{active?.name ?? "Wedding plans"}</b></div><div className="top-actions"><button className="icon-btn" title="Import plan" onClick={() => fileRef.current?.click()}><ArrowDownToLine size={17}/></button><input ref={fileRef} type="file" accept="application/json" hidden onChange={e => importPlan(e.target.files?.[0])}/><button className="icon-btn" title="Export plan" onClick={exportPlan} disabled={!active}><Download size={17}/></button><div className="top-divider"/><div className="today-label">A LITTLE PLANNING, A LOT OF LOVE <Heart size={13}/></div></div></header>
+        <header className="topbar"><div className="breadcrumb">Workspace <ChevronRight size={14}/> <b>{active?.name ?? "Wedding plans"}</b></div><div className="top-actions"><button className="icon-btn" title="Import plan" onClick={() => fileRef.current?.click()}><ArrowDownToLine size={17}/></button><input ref={fileRef} type="file" accept="application/json" hidden onChange={e => importPlan(e.target.files?.[0])}/><button className="icon-btn" title="Export plan" onClick={exportPlan} disabled={!active}><Download size={17}/></button><div className="top-divider"/><div className="today-label">A LITTLE PLANNING, A LOT OF LOVE <Heart size={13}/></div><button className="icon-btn" title="Logout" onClick={logout}><LogOut size={16}/></button></div></header>
         {active ? <>
-          <section className="welcome-row"><div><div className="eyebrow"><span className="eyebrow-line"/> YOUR WEDDING JOURNEY</div><h1>Let’s make it <em>beautiful.</em></h1><p>Every little detail, thoughtfully planned for your big day.</p></div><div className="welcome-actions"><button className="button button-soft" onClick={() => {setEditingPlan(active);setShowPlanModal(true)}}><Pencil size={15}/> Edit plan</button><div className="more-wrap"><button className="button button-icon" onClick={() => setMenuId(menuId === active.id ? "" : active.id)}><MoreHorizontal size={18}/></button>{menuId === active.id && <div className="dropdown"><button onClick={async () => {setMenuId("");try{const response=await fetch("/api/plans",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...active,id:"",name:active.name+" copy"})});if(!response.ok)throw new Error();const copy=await response.json() as WeddingPlan;setPlans(c=>[copy,...c]);setActiveId(copy.id)}catch{alert("Gagal menggandakan wedding plan.")}}}>Duplicate plan</button><button className="danger-text" onClick={() => removePlan(active.id)}><Trash2 size={14}/> Delete plan</button></div>}</div></div></section>
+          <section className="welcome-row"><div><div className="eyebrow"><span className="eyebrow-line"/> YOUR WEDDING JOURNEY</div><h1>Let’s make it <em>beautiful.</em></h1><p>Every little detail, thoughtfully planned for your big day.</p></div><div className="welcome-actions"><button className="button button-soft" onClick={() => {setEditingPlan(active);setShowPlanModal(true)}}><Pencil size={15}/> Edit plan</button><div className="more-wrap"><button className="button button-icon" onClick={() => setMenuId(menuId === active.id ? "" : active.id)}><MoreHorizontal size={18}/></button>{menuId === active.id && <div className="dropdown"><button onClick={async () => {setMenuId("");try{const response=await fetch("/api/plans",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...active,id:"",name:active.name+" copy",items:active.items.map(item=>({...item,id:crypto.randomUUID()}))})});if(!response.ok)throw new Error();const copy=await response.json() as WeddingPlan;setPlans(c=>[copy,...c]);setActiveId(copy.id)}catch{alert("Gagal menggandakan wedding plan.")}}}>Duplicate plan</button><button className="danger-text" onClick={() => removePlan(active.id)}><Trash2 size={14}/> Delete plan</button></div>}</div></div></section>
           <section className="hero-card"><div className="hero-content"><span className="hero-kicker"><Sparkles size={13}/> THE COUNTDOWN IS ON</span><div className="couple-name">{active.partner || active.name}</div><div className="hero-meta"><span><CalendarDays size={15}/>{fmtDate}</span><span><MapPin size={15}/>{active.location || "Lokasi belum ditentukan"}</span><span><Users size={15}/>{active.guestCount.toLocaleString("id-ID")} guests</span></div><div className="hero-quote">“A day to remember, a love to celebrate.”</div></div><div className="hero-art"><div className="art-ring ring-one"/><div className="art-ring ring-two"/><div className="art-center"><Heart size={30} strokeWidth={1.2}/><span>EST.</span><b>FOREVER</b></div><span className="sparkle s1">✳</span><span className="sparkle s2">✧</span><span className="sparkle s3">✦</span></div></section>
 
           <section className="section-heading"><div><span className="eyebrow">THE BIG PICTURE</span><h2>Your budget at a glance</h2></div><span className="updated-label">Updated just now</span></section>
