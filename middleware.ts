@@ -1,34 +1,55 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHmac, timingSafeEqual } from "node:crypto";
 
-function validSession(token?: string) {
+function fromBase64Url(value: string) {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized + "=".repeat((4 - normalized.length % 4) % 4);
+  return Uint8Array.from(atob(padded), char => char.charCodeAt(0));
+}
+
+function toBase64Url(value: ArrayBuffer) {
+  const bytes = new Uint8Array(value);
+  let binary = "";
+  bytes.forEach(byte => { binary += String.fromCharCode(byte); });
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+async function validSession(token?: string) {
   if (!token) return false;
   const secret = process.env.AUTH_SECRET;
   if (!secret || secret.length < 32) return false;
   const [payload, supplied] = token.split(".");
   if (!payload || !supplied) return false;
-  const expected = createHmac("sha256", secret).update(payload).digest("base64url");
-  const a = Buffer.from(supplied);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) return false;
   try {
-    const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { exp?: number };
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const expected = toBase64Url(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload)));
+    if (expected.length !== supplied.length) return false;
+    let mismatch = 0;
+    for (let i = 0; i < expected.length; i++) mismatch |= expected.charCodeAt(i) ^ supplied.charCodeAt(i);
+    if (mismatch !== 0) return false;
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const decoded = atob(normalized + "=".repeat((4 - normalized.length % 4) % 4));
+    const data = JSON.parse(decoded) as { exp?: number };
     return typeof data.exp === "number" && data.exp > Math.floor(Date.now() / 1000);
   } catch {
     return false;
   }
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const openPath = path === "/login" || path.startsWith("/api/auth/");
+  const authenticated = await validSession(request.cookies.get("wedplan_session")?.value);
   if (openPath) {
-    if (path === "/login" && validSession(request.cookies.get("wedplan_session")?.value)) {
-      return NextResponse.redirect(new URL("/", request.url));
-    }
+    if (path === "/login" && authenticated) return NextResponse.redirect(new URL("/", request.url));
     return NextResponse.next();
   }
-  if (!validSession(request.cookies.get("wedplan_session")?.value)) {
+  if (!authenticated) {
     if (path.startsWith("/api/")) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     return NextResponse.redirect(new URL("/login", request.url));
   }
