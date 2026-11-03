@@ -8,11 +8,10 @@ import {
   MapPin, MoreHorizontal, Pencil, Plus, Search, Settings2, Sparkles, Trash2,
   TrendingUp, Users, Wallet, X
 } from "lucide-react";
-import { categories, starterPlans } from "@/lib/defaults";
+import { categories } from "@/lib/defaults";
 import { dateLabel, rupiah, shortRupiah } from "@/lib/format";
 import type { BudgetItem, PaymentStatus, WeddingPlan } from "@/lib/types";
 
-const STORAGE_KEY = "wedplan.v1";
 const blankItem = (): BudgetItem => ({ id: crypto.randomUUID(), name: "", category: categories[0], vendor: "", planned: 0, actual: 0, paymentStatus: "Belum dibayar", dueDate: "", notes: "" });
 
 export default function WeddingDashboard() {
@@ -30,21 +29,23 @@ export default function WeddingDashboard() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      const initial = saved ? JSON.parse(saved) as WeddingPlan[] : starterPlans;
-      setPlans(initial);
-      setActiveId(initial[0]?.id ?? "");
-    } catch {
-      setPlans(starterPlans);
-      setActiveId(starterPlans[0].id);
-    }
-    setReady(true);
+    let cancelled = false;
+    fetch("/api/plans", { cache: "no-store" })
+      .then(async response => {
+        if (!response.ok) throw new Error("Tidak dapat memuat wedding plan.");
+        return response.json() as Promise<WeddingPlan[]>;
+      })
+      .then(initial => {
+        if (cancelled) return;
+        setPlans(initial);
+        setActiveId(initial[0]?.id ?? "");
+      })
+      .catch(error => {
+        if (!cancelled) alert(error instanceof Error ? error.message : "Gagal memuat data dari server.");
+      })
+      .finally(() => { if (!cancelled) setReady(true); });
+    return () => { cancelled = true; };
   }, []);
-
-  useEffect(() => {
-    if (ready) localStorage.setItem(STORAGE_KEY, JSON.stringify(plans));
-  }, [plans, ready]);
 
   const active = plans.find(p => p.id === activeId) ?? plans[0];
   const totals = useMemo(() => {
@@ -56,17 +57,43 @@ export default function WeddingDashboard() {
   }, [active]);
   const fmtDate = active ? dateLabel(active.date) : "Belum ada rencana";
 
-  function updateActive(updater: (p: WeddingPlan) => WeddingPlan) {
+  async function updateActive(updater: (p: WeddingPlan) => WeddingPlan) {
     if (!active) return;
-    setPlans(current => current.map(p => p.id === active.id ? { ...updater(p), updatedAt: new Date().toISOString() } : p));
+    const nextPlan = { ...updater(active), updatedAt: new Date().toISOString() };
+    setPlans(current => current.map(p => p.id === active.id ? nextPlan : p));
+    try {
+      const response = await fetch(`/api/plans/${active.id}`, {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(nextPlan)
+      });
+      if (!response.ok) throw new Error("Gagal menyimpan perubahan budget.");
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Gagal menyimpan perubahan ke server.");
+    }
   }
-  function savePlan(data: WeddingPlan) {
-    setPlans(current => editingPlan ? current.map(p => p.id === data.id ? data : p) : [data, ...current]);
-    setActiveId(data.id); setShowPlanModal(false); setEditingPlan(null);
+  async function savePlan(data: WeddingPlan) {
+    try {
+      const response = await fetch(editingPlan ? `/api/plans/${data.id}` : "/api/plans", {
+        method: editingPlan ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) throw new Error("Gagal menyimpan wedding plan.");
+      const saved = await response.json() as WeddingPlan;
+      setPlans(current => editingPlan ? current.map(p => p.id === saved.id ? saved : p) : [saved, ...current]);
+      setActiveId(saved.id); setShowPlanModal(false); setEditingPlan(null);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Gagal menyimpan wedding plan.");
+    }
   }
-  function removePlan(id: string) {
+  async function removePlan(id: string) {
     if (!confirm("Hapus wedding plan ini beserta seluruh item budget-nya?")) return;
-    const next = plans.filter(p => p.id !== id); setPlans(next); setActiveId(next[0]?.id ?? ""); setMenuId("");
+    try {
+      const response = await fetch(`/api/plans/${id}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("Gagal menghapus wedding plan.");
+      const next = plans.filter(p => p.id !== id); setPlans(next); setActiveId(next[0]?.id ?? ""); setMenuId("");
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Gagal menghapus wedding plan.");
+    }
   }
   function saveItem(item: BudgetItem) {
     updateActive(p => ({ ...p, items: editingItem ? p.items.map(x => x.id === item.id ? item : x) : [item, ...p.items] }));
@@ -87,8 +114,11 @@ export default function WeddingDashboard() {
     try {
       const imported = JSON.parse(await file.text()) as WeddingPlan;
       if (!imported.name || !Array.isArray(imported.items)) throw new Error("Format tidak valid");
-      const copy = { ...imported, id: crypto.randomUUID(), name: imported.name + " (Imported)", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
-      setPlans(current => [copy, ...current]); setActiveId(copy.id);
+      const copy = { ...imported, id: "", name: imported.name + " (Imported)", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+      const response = await fetch("/api/plans", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(copy) });
+      if (!response.ok) throw new Error("Tidak dapat mengimpor plan.");
+      const saved = await response.json() as WeddingPlan;
+      setPlans(current => [saved, ...current]); setActiveId(saved.id);
     } catch { alert("File tidak valid. Pilih file ekspor WedPlan berformat JSON."); }
     if (fileRef.current) fileRef.current.value = "";
   }
@@ -128,7 +158,7 @@ export default function WeddingDashboard() {
       <main className="main-area">
         <header className="topbar"><div className="breadcrumb">Workspace <ChevronRight size={14}/> <b>{active?.name ?? "Wedding plans"}</b></div><div className="top-actions"><button className="icon-btn" title="Import plan" onClick={() => fileRef.current?.click()}><ArrowDownToLine size={17}/></button><input ref={fileRef} type="file" accept="application/json" hidden onChange={e => importPlan(e.target.files?.[0])}/><button className="icon-btn" title="Export plan" onClick={exportPlan} disabled={!active}><Download size={17}/></button><div className="top-divider"/><div className="today-label">A LITTLE PLANNING, A LOT OF LOVE <Heart size={13}/></div></div></header>
         {active ? <>
-          <section className="welcome-row"><div><div className="eyebrow"><span className="eyebrow-line"/> YOUR WEDDING JOURNEY</div><h1>Let’s make it <em>beautiful.</em></h1><p>Every little detail, thoughtfully planned for your big day.</p></div><div className="welcome-actions"><button className="button button-soft" onClick={() => {setEditingPlan(active);setShowPlanModal(true)}}><Pencil size={15}/> Edit plan</button><div className="more-wrap"><button className="button button-icon" onClick={() => setMenuId(menuId === active.id ? "" : active.id)}><MoreHorizontal size={18}/></button>{menuId === active.id && <div className="dropdown"><button onClick={() => {setMenuId("");setPlans(c => [{...active,id:crypto.randomUUID(),name:active.name+" copy",createdAt:new Date().toISOString()},...c])}}>Duplicate plan</button><button className="danger-text" onClick={() => removePlan(active.id)}><Trash2 size={14}/> Delete plan</button></div>}</div></div></section>
+          <section className="welcome-row"><div><div className="eyebrow"><span className="eyebrow-line"/> YOUR WEDDING JOURNEY</div><h1>Let’s make it <em>beautiful.</em></h1><p>Every little detail, thoughtfully planned for your big day.</p></div><div className="welcome-actions"><button className="button button-soft" onClick={() => {setEditingPlan(active);setShowPlanModal(true)}}><Pencil size={15}/> Edit plan</button><div className="more-wrap"><button className="button button-icon" onClick={() => setMenuId(menuId === active.id ? "" : active.id)}><MoreHorizontal size={18}/></button>{menuId === active.id && <div className="dropdown"><button onClick={async () => {setMenuId("");try{const response=await fetch("/api/plans",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...active,id:"",name:active.name+" copy"})});if(!response.ok)throw new Error();const copy=await response.json() as WeddingPlan;setPlans(c=>[copy,...c]);setActiveId(copy.id)}catch{alert("Gagal menggandakan wedding plan.")}}}>Duplicate plan</button><button className="danger-text" onClick={() => removePlan(active.id)}><Trash2 size={14}/> Delete plan</button></div>}</div></div></section>
           <section className="hero-card"><div className="hero-content"><span className="hero-kicker"><Sparkles size={13}/> THE COUNTDOWN IS ON</span><div className="couple-name">{active.partner || active.name}</div><div className="hero-meta"><span><CalendarDays size={15}/>{fmtDate}</span><span><MapPin size={15}/>{active.location || "Lokasi belum ditentukan"}</span><span><Users size={15}/>{active.guestCount.toLocaleString("id-ID")} guests</span></div><div className="hero-quote">“A day to remember, a love to celebrate.”</div></div><div className="hero-art"><div className="art-ring ring-one"/><div className="art-ring ring-two"/><div className="art-center"><Heart size={30} strokeWidth={1.2}/><span>EST.</span><b>FOREVER</b></div><span className="sparkle s1">✳</span><span className="sparkle s2">✧</span><span className="sparkle s3">✦</span></div></section>
 
           <section className="section-heading"><div><span className="eyebrow">THE BIG PICTURE</span><h2>Your budget at a glance</h2></div><span className="updated-label">Updated just now</span></section>
