@@ -17,7 +17,7 @@ WedPlan is a responsive wedding budget planner built with Next.js, TypeScript, P
 ## Stack
 - Next.js 15 / React 19 / TypeScript
 - PostgreSQL 16
-- Prisma 6
+- Prisma 7 with PostgreSQL driver adapter
 - Docker Compose
 - Nginx reverse proxy (optional, recommended for public access)
 
@@ -76,7 +76,7 @@ Keep backups outside the container and test restores regularly. The named Docker
 - Use a separate PostgreSQL database/volume for each deployment unless you intentionally configure a shared database.
 
 ## Template alignment
-The Google Sheets reference link was provided, but its workbook content was not available through the connected file integrations during initial implementation. The current categories are starter defaults and must be reconciled against the workbook once an `.xlsx` export is attached.
+The Google Sheets reference link was provided, but its workbook content was not readable through the connected Google/Drive integrations during initial implementation. The current categories are starter defaults and must be reconciled against the workbook once an `.xlsx` export is attached.
 
 ## Roadmap
 - Reconcile category names, rows, formulas, and calculations against the user's workbook
