@@ -1,59 +1,52 @@
-# WedPlan — Wedding Budget Planner
+# WedPlan — Wedding Planning Workspace
 
-WedPlan is a responsive wedding budget planner built with Next.js, TypeScript, Prisma, and PostgreSQL.
+WedPlan is a private wedding-planning workspace built with Next.js, TypeScript, Prisma, PostgreSQL, and Docker Compose.
 
-## Current features
-- Private workspace login using an environment-configured password
-- Create, edit, duplicate, and delete multiple wedding plans
-- Wedding date, location, guest estimate, and total budget
-- Budget items grouped by category
-- Planned amount, actual amount, vendor, payment status, due date, and notes
-- Dashboard totals, remaining budget, utilization, and category allocation
-- Search and category filtering for budget items
-- JSON export/import for moving a plan between WedPlan deployments
-- PostgreSQL persistence and Prisma migrations
-- Docker Compose deployment with a persistent database volume
+## Implemented modules
+
+- Workspace login using an environment-configured password and signed, HTTP-only session cookie.
+- Multiple wedding plans with date, venue/location, guest estimate, and total budget.
+- Budget and expense tracking by category, including planned amount, actual amount, payment status, due date, vendor, and notes.
+- Payment ledger for deposits, installments, and final payments. Payment records linked to a budget item automatically recalculate its actual paid amount and payment status.
+- Vendor directory with category, contact details, quote, negotiation/contract status, and notes.
+- Guest list with group, contact, guest count, invitation status, RSVP, meal preferences, seating/table, and notes.
+- Wedding checklist with category, deadline, priority, status, assignee, and notes.
+- Reports overview across budget, vendors, guests, checklist, and payment records.
+- CSV export for Excel/Google Sheets and browser print-to-PDF.
+- Per-plan JSON import/export for portability.
+- PostgreSQL persistence and Prisma migrations.
+- Docker Compose deployment, persistent database volume, and GitHub Actions build checks.
 
 ## Stack
+
 - Next.js 15 / React 19 / TypeScript
 - PostgreSQL 16
 - Prisma 7 with PostgreSQL driver adapter
 - Docker Compose
-- Nginx reverse proxy (optional, recommended for public access)
+- Nginx reverse proxy (recommended for public deployment)
 
-## Deploy with Docker Compose
+## Deploy / update
+
+Set unique values for `POSTGRES_PASSWORD`, `ADMIN_PASSWORD`, and `AUTH_SECRET` in `.env`. Keep the app bound to `127.0.0.1` when Nginx runs on the host. Do not expose PostgreSQL or the app port publicly.
+
+For an existing deployment, back up the database before updating:
 
 ```bash
-git clone https://github.com/vassameta/wedplan.git
-cd wedplan
-cp .env.example .env
-nano .env
+docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' > wedplan-before-update.sql
+```
+
+Then pull the intended branch and rebuild:
+
+```bash
+git pull origin main
 docker compose up -d --build
 docker compose ps
-docker compose logs -f app
+docker compose logs --tail=100 app
 ```
 
-Set unique strong values for `POSTGRES_PASSWORD`, `ADMIN_PASSWORD`, and `AUTH_SECRET` before starting. Keep the app bound to `127.0.0.1` when using Nginx on the host. Do not expose PostgreSQL publicly.
+The app container runs `prisma migrate deploy` at startup. The new planner modules require the `PlannerRecord` migration to be applied before use. The app listens on `http://127.0.0.1:3000` by default.
 
-The app runs on `http://127.0.0.1:3000` by default. Configure Nginx to proxy to that address and enable HTTPS before exposing it to the internet.
-
-Database migrations are applied automatically by the app container on startup using `prisma migrate deploy`.
-
-## Local development
-
-Requires Node.js 20.9+ and PostgreSQL.
-
-```bash
-npm install
-cp .env.example .env
-# Edit DATABASE_URL, ADMIN_PASSWORD, and AUTH_SECRET for your local environment
-npx prisma migrate dev --name init
-npm run dev
-```
-
-Open http://localhost:3000 and sign in using `ADMIN_PASSWORD`.
-
-## Backup and restore
+## Database backup and restore
 
 Create a logical backup:
 
@@ -61,27 +54,35 @@ Create a logical backup:
 docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' > wedplan-backup.sql
 ```
 
-Restore into an empty or intentionally replaced database:
+Restore only into an empty or intentionally replaced database:
 
 ```bash
 cat wedplan-backup.sql | docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" "$POSTGRES_DB"'
 ```
 
-Keep backups outside the container and test restores regularly. The named Docker volume `wedplan_db_data` stores the live PostgreSQL data.
+Keep database backups outside the container and test restores regularly. The named Docker volume `wedplan_db_data` contains the live PostgreSQL data.
 
-## Security notes
-- The initial release has one shared workspace password, not individual user accounts or role-based permissions.
-- Use HTTPS, strong unique secrets, and network restrictions.
-- Do not commit `.env` or production credentials.
-- Use a separate PostgreSQL database/volume for each deployment unless you intentionally configure a shared database.
+## Security notes and current limitations
 
-## Template alignment
-The Google Sheets reference link was provided, but its workbook content was not readable through the connected Google/Drive integrations during initial implementation. The current categories are starter defaults and must be reconciled against the workbook once an `.xlsx` export is attached.
+- The current authentication model is one shared workspace password (`ADMIN_PASSWORD`), not individual user accounts or role-based access. Anyone with that password has the same workspace permissions.
+- Use HTTPS so the production session cookie marked `Secure` works correctly.
+- Keep `.env` out of Git and use unique production secrets. Rotate credentials if they have been exposed.
+- Restrict SSH access and expose only ports 80/443 publicly; keep port 3000 and PostgreSQL private.
+- The repository should be private before entering real personal wedding information.
+- CSV export opens in Excel/Google Sheets. PDF is generated through the browser's Print → Save as PDF flow; this is not a server-side PDF report.
 
-## Roadmap
-- Reconcile category names, rows, formulas, and calculations against the user's workbook
-- Vendor contact and contract management
-- Guest list and RSVP tracking
-- Checklist and timeline
-- Individual user accounts and shared planning collaborators
-- PDF and spreadsheet reporting
+## Spreadsheet alignment status
+
+The Google Sheets reference URL was provided, but its workbook contents were not accessible during implementation and no exported `.xlsx` was available. Therefore the current budget categories and default values are generic starter values, not a verified copy of the workbook's sheets, formulas, or calculation rules. Importing/aligning the exact workbook remains a required final validation step once the workbook is supplied.
+
+## Local development
+
+Requires Node.js 22+ and PostgreSQL.
+
+```bash
+npm install
+cp .env.example .env
+# Set DATABASE_URL, ADMIN_PASSWORD, and AUTH_SECRET
+npx prisma migrate dev
+npm run dev
+```
