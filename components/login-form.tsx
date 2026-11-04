@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Heart, LockKeyhole, Sparkles } from "lucide-react";
+import { Heart, LockKeyhole, Mail, Sparkles } from "lucide-react";
 
 export default function LoginForm() {
+  const [email, setEmail] = useState("admin@wedplan.local");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -17,7 +18,7 @@ export default function LoginForm() {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password })
+        body: JSON.stringify({ email, password })
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Login gagal.");
@@ -37,12 +38,14 @@ export default function LoginForm() {
         <h1>Welcome to <em>WedPlan.</em></h1>
         <p>A thoughtful space for every little detail of your big day.</p>
         <form onSubmit={submit}>
-          <label htmlFor="password"><LockKeyhole size={14}/> Workspace password</label>
+          <label htmlFor="email"><Mail size={14}/> Email workspace</label>
+          <input id="email" type="email" value={email} onChange={e=>setEmail(e.target.value)} autoComplete="username" required placeholder="admin@wedplan.local"/>
+          <label htmlFor="password"><LockKeyhole size={14}/> Password</label>
           <input id="password" type="password" value={password} onChange={e=>setPassword(e.target.value)} autoComplete="current-password" required placeholder="Enter your password"/>
           {error && <div className="login-error">{error}</div>}
           <button type="submit" disabled={busy}>{busy ? "Signing in..." : "Enter workspace"}</button>
         </form>
-        <small>Private wedding planning space · Made with love</small>
+        <small>First login: use ADMIN_EMAIL (default admin@wedplan.local) and ADMIN_PASSWORD from server .env.</small>
       </div>
     </main>
   );
