@@ -58,7 +58,7 @@ export default function ReportsDashboard() {
 
   if (busy) return <main className="module-page"><p>Memuat laporan...</p></main>;
   return <main className="module-page">
-    <header className="module-top"><Link href="/" className="module-brand">♥ wedplan<span>.</span></Link><nav><Link href="/">Dashboard</Link><Link href="/vendors">Vendors</Link><Link href="/guests">Guests</Link><Link href="/checklist">Checklist</Link><Link href="/payments">Payments</Link><Link href="/reports">Reports</Link></nav></header>
+    <header className="module-top"><Link href="/" className="module-brand">♥ wedplan<span>.</span></Link><nav><Link href="/">Dashboard</Link><Link href="/vendors">Vendors</Link><Link href="/guests">Guests</Link><Link href="/checklist">Checklist</Link><Link href="/payments">Payments</Link><Link href="/reports">Reports</Link><Link href="/users">Users</Link></nav></header>
     <section className="module-heading"><div><span className="eyebrow">YOUR WEDDING AT A GLANCE</span><h1>Reports & overview</h1><p>Ringkasan anggaran, pembayaran, vendor, tamu, dan checklist.</p></div><div className="report-actions"><button className="button button-soft" onClick={() => window.print()}>Print / Save PDF</button><button className="button button-dark" onClick={exportAll} disabled={!active}>Export Excel (CSV)</button></div></section>
     <section className="module-toolbar"><label>Wedding plan<select value={planId} onChange={event => setPlanId(event.target.value)}>{plans.map(plan => <option key={plan.id} value={plan.id}>{plan.partner || plan.name} · {plan.name}</option>)}</select></label><span>{active?.date || "Tanggal belum ditentukan"}</span></section>
     {error && <div className="module-error">{error}</div>}
