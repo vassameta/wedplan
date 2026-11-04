@@ -40,7 +40,7 @@ function readSession(token?: string): (SessionContext & { exp: number }) | null 
     };
     if (typeof parsed.exp !== "number" || parsed.exp <= Math.floor(Date.now() / 1000)) return null;
     if (typeof parsed.userId !== "string" || !parsed.userId) return null;
-    if (!parsed.role || !["ADMIN", "EDITOR", "VIEWER"].includes(parsed.role)) return null;
+    if (typeof parsed.role !== "string" || !["ADMIN", "EDITOR", "VIEWER"].includes(parsed.role)) return null;
     return { userId: parsed.userId, role: parsed.role, exp: parsed.exp };
   } catch {
     return null;
