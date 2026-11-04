@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
+import { prisma } from "@/lib/prisma";
 
 const COOKIE_NAME = "wedplan_session";
 const SESSION_SECONDS = 60 * 60 * 24 * 14;
@@ -41,7 +42,7 @@ function readSession(token?: string): (SessionContext & { exp: number }) | null 
     // Existing signed sessions from the original single-password release remain admin sessions.
     const role = parsed.role ?? "ADMIN";
     if (!["ADMIN", "EDITOR", "VIEWER"].includes(role)) return null;
-    return { userId: parsed.userId ?? "legacy-admin", role, exp: parsed.exp };
+    return { userId: parsed.userId, role, exp: parsed.exp };
   } catch {
     return null;
   }
@@ -55,7 +56,7 @@ export async function getSessionContext(): Promise<SessionContext | null> {
   const store = await cookies();
   const session = readSession(store.get(COOKIE_NAME)?.value);
   if (!session) return null;
-  return { userId: session.userId, role: session.role };
+  const user = await prisma.workspaceUser.findUnique({ where: { id: session.userId }, select: { id: true, role: true, isActive: true } });\n  if (!user || !user.isActive) return null;\n  return { userId: user.id, role: user.role };
 }
 
 export async function hasSession() {
