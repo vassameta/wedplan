@@ -4,7 +4,7 @@ WedPlan is a private wedding-planning workspace built with Next.js, TypeScript, 
 
 ## Implemented modules
 
-- Workspace login using an environment-configured password and signed, HTTP-only session cookie.
+- Individual workspace accounts with email/password login, ADMIN / EDITOR / VIEWER roles, signed HTTP-only sessions, and in-memory login throttling. The first administrator is bootstrapped from ADMIN_EMAIL and ADMIN_PASSWORD.
 - Multiple wedding plans with date, venue/location, guest estimate, and total budget.
 - Budget and expense tracking by category, including planned amount, actual amount, payment status, due date, vendor, and notes.
 - Payment ledger for deposits, installments, and final payments. Payment records linked to a budget item automatically recalculate its actual paid amount and payment status.
@@ -64,8 +64,8 @@ Keep database backups outside the container and test restores regularly. The nam
 
 ## Security notes and current limitations
 
-- The current authentication model is one shared workspace password (`ADMIN_PASSWORD`), not individual user accounts or role-based access. Anyone with that password has the same workspace permissions.
-- Use HTTPS so the production session cookie marked `Secure` works correctly.
+- ADMIN_EMAIL and ADMIN_PASSWORD bootstrap the first administrator on first login. After that, each collaborator should use an individual account created by an administrator. ADMIN manages users, EDITOR can change wedding data, and VIEWER is read-only.
+- Use HTTPS so the production session cookie marked `Secure` works correctly. Login attempts are throttled in-process; for multi-instance deployments, add a shared rate-limit store at the reverse proxy or application layer.
 - Keep `.env` out of Git and use unique production secrets. Rotate credentials if they have been exposed.
 - Restrict SSH access and expose only ports 80/443 publicly; keep port 3000 and PostgreSQL private.
 - The repository should be private before entering real personal wedding information.
