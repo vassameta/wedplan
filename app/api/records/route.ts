@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/auth";
+import { requireRole, requireSession } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -44,7 +44,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const denied = await requireSession();
+  const denied = await requireRole(["ADMIN", "EDITOR"]);
   if (denied) return denied;
   let body: any;
   try { body = await request.json(); } catch { return Response.json({ error: "JSON tidak valid." }, { status: 400 }); }
