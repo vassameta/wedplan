@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/auth";
+import { requireRole, requireSession } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -25,7 +25,7 @@ function serializePlan(plan: any) {
 }
 
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
-  const denied = await requireSession();
+  const denied = await requireRole(["ADMIN", "EDITOR"]);
   if (denied) return denied;
   const { id } = await context.params;
   let body: any;
@@ -74,7 +74,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
 }
 
 export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
-  const denied = await requireSession();
+  const denied = await requireRole(["ADMIN", "EDITOR"]);
   if (denied) return denied;
   const { id } = await context.params;
   try {
