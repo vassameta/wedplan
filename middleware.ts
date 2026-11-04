@@ -35,7 +35,7 @@ async function validSession(token?: string) {
     const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
     const decoded = atob(normalized + "=".repeat((4 - normalized.length % 4) % 4));
     const data = JSON.parse(decoded) as { exp?: number; userId?: string; role?: string };
-    return typeof data.exp === "number" && data.exp > Math.floor(Date.now() / 1000) && typeof data.userId === "string" && !!data.userId && ["ADMIN", "EDITOR", "VIEWER"].includes(data.role);
+    return typeof data.exp === "number" && data.exp > Math.floor(Date.now() / 1000) && typeof data.userId === "string" && !!data.userId && typeof data.role === "string" && ["ADMIN", "EDITOR", "VIEWER"].includes(data.role);
   } catch {
     return false;
   }
