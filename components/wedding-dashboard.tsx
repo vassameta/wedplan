@@ -147,9 +147,9 @@ export default function WeddingDashboard() {
         <div className="side-label">WORKSPACE</div>
         <button className={tab === "Overview" ? "nav-item active" : "nav-item"} onClick={() => setTab("Overview")}><LayoutDashboard size={17}/> Overview</button>
         <button className={tab === "Budget" ? "nav-item active" : "nav-item"} onClick={() => setTab("Budget")}><Wallet size={17}/> Budget & expenses</button>
-        <button className={tab === "Vendors" ? "nav-item active" : "nav-item"} onClick={() => setTab("Vendors")}><Sparkles size={17}/> Vendors <span className="nav-soon">BETA</span></button>
-        <button className={tab === "Guests" ? "nav-item active" : "nav-item"} onClick={() => setTab("Guests")}><Users size={17}/> Guest list <span className="nav-soon">BETA</span></button>
-        <button className={tab === "Checklist" ? "nav-item active" : "nav-item"} onClick={() => setTab("Checklist")}><ClipboardList size={17}/> Checklist <span className="nav-soon">BETA</span></button>
+        <button className="nav-item" onClick={() => window.location.assign("/vendors")}><Sparkles size={17}/> Vendors</button>
+        <button className="nav-item" onClick={() => window.location.assign("/guests")}><Users size={17}/> Guest list</button>
+        <button className="nav-item" onClick={() => window.location.assign("/checklist")}><ClipboardList size={17}/> Checklist</button><button className="nav-item" onClick={() => window.location.assign("/payments")}><CircleDollarSign size={17}/> Payments</button><button className="nav-item" onClick={() => window.location.assign("/reports")}><TrendingUp size={17}/> Reports</button><button className="nav-item" onClick={() => window.location.assign("/users")}><Settings2 size={17}/> Users & access</button>
         <div className="side-divider"/>
         <div className="side-label">YOUR PLANS <button onClick={() => {setEditingPlan(null);setShowPlanModal(true)}} aria-label="Create plan"><Plus size={14}/></button></div>
         <div className="plan-list">

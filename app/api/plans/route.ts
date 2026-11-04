@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/auth";
+import { requireRole, requireSession } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -35,7 +35,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const denied = await requireSession();
+  const denied = await requireRole(["ADMIN", "EDITOR"]);
   if (denied) return denied;
 
   let body: any;
