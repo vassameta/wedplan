@@ -170,7 +170,7 @@ export default function PlannerManager({ kind }: { kind: Kind }) {
   if (loading) return <main className="module-page"><p>Memuat workspace...</p></main>;
 
   return <main className="module-page">
-    <header className="module-top"><Link href="/" className="module-brand">♥ wedplan<span>.</span></Link><nav><Link href="/">Dashboard</Link><Link href="/vendors">Vendors</Link><Link href="/guests">Guests</Link><Link href="/checklist">Checklist</Link><Link href="/payments">Payments</Link><Link href="/reports">Reports</Link></nav></header>
+    <header className="module-top"><Link href="/" className="module-brand">♥ wedplan<span>.</span></Link><nav><Link href="/">Dashboard</Link><Link href="/vendors">Vendors</Link><Link href="/guests">Guests</Link><Link href="/checklist">Checklist</Link><Link href="/payments">Payments</Link><Link href="/reports">Reports</Link><Link href="/users">Users</Link></nav></header>
     <section className="module-heading"><div><span className="eyebrow">{config.eyebrow}</span><h1>{config.title}</h1><p>{config.description}</p></div><button className="button button-dark" onClick={openNew} disabled={!planId}>＋ Add {config.singular}</button></section>
     <section className="module-toolbar"><label>Wedding plan<select value={planId} onChange={event => setPlanId(event.target.value)}>{plans.map(plan => <option key={plan.id} value={plan.id}>{plan.partner || plan.name} · {plan.name}</option>)}</select></label><input className="module-search" placeholder="Cari data..." value={search} onChange={event => setSearch(event.target.value)}/><span>{visible.length} data</span></section>
     {error && <div className="module-error">{error}</div>}
