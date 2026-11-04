@@ -13,14 +13,14 @@ enum PaymentStatus {
   PAID
 }
 
-enum PlannerRecordKind {
+enum WorkspaceRole {\n  ADMIN\n  EDITOR\n  VIEWER\n}\n\nenum PlannerRecordKind {
   VENDOR
   GUEST
   TASK
   PAYMENT
 }
 
-model WeddingPlan {
+model WorkspaceUser {\n  id           String        @id @default(cuid())\n  email        String        @unique\n  name         String\n  passwordHash String\n  role         WorkspaceRole @default(EDITOR)\n  isActive     Boolean       @default(true)\n  createdAt    DateTime      @default(now())\n  updatedAt    DateTime      @updatedAt\n}\n\nmodel WeddingPlan {
   id         String          @id @default(cuid())
   name       String
   partner    String          @default("")
