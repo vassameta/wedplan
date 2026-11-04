@@ -15,7 +15,19 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
   const { id } = await context.params;
   let body: any;
   try { body = await request.json(); } catch { return Response.json({ error: "JSON tidak valid." }, { status: 400 }); }
-  const session = await getSessionContext();\n  if (session?.userId === id && body.isActive === false) return Response.json({ error: "Akun yang sedang digunakan tidak dapat dinonaktifkan." }, { status: 400 });\n  const currentUser = await prisma.workspaceUser.findUnique({ where: { id } });\n  if (!currentUser) return Response.json({ error: "User tidak ditemukan." }, { status: 404 });\n  if (currentUser.role === "ADMIN" && (body.role === "EDITOR" || body.role === "VIEWER" || body.isActive === false)) {\n    const activeAdmins = await prisma.workspaceUser.count({ where: { role: "ADMIN", isActive: true } });\n    if (activeAdmins <= 1) return Response.json({ error: "Minimal harus ada satu admin aktif." }, { status: 400 });\n  }\n  const data: any = {};
+
+  const session = await getSessionContext();
+  if (session?.userId === id && body.isActive === false) {
+    return Response.json({ error: "Akun yang sedang digunakan tidak dapat dinonaktifkan." }, { status: 400 });
+  }
+  const currentUser = await prisma.workspaceUser.findUnique({ where: { id } });
+  if (!currentUser) return Response.json({ error: "User tidak ditemukan." }, { status: 404 });
+  if (currentUser.role === "ADMIN" && (body.role === "EDITOR" || body.role === "VIEWER" || body.isActive === false)) {
+    const activeAdmins = await prisma.workspaceUser.count({ where: { role: "ADMIN", isActive: true } });
+    if (activeAdmins <= 1) return Response.json({ error: "Minimal harus ada satu admin aktif." }, { status: 400 });
+  }
+
+  const data: any = {};
   if (typeof body.name === "string" && body.name.trim()) data.name = body.name.trim();
   if (["ADMIN", "EDITOR", "VIEWER"].includes(body.role)) data.role = body.role;
   if (typeof body.isActive === "boolean") data.isActive = body.isActive;
@@ -27,7 +39,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
       select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true }
     });
     return Response.json(user);
-  } catch { return Response.json({ error: "User tidak ditemukan atau gagal diperbarui." }, { status: 404 }); }
+  } catch { return Response.json({ error: "User gagal diperbarui." }, { status: 404 }); }
 }
 
 export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
