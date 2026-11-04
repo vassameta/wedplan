@@ -34,7 +34,7 @@ async function validSession(token?: string) {
     if (mismatch !== 0) return false;
     const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
     const decoded = atob(normalized + "=".repeat((4 - normalized.length % 4) % 4));
-    const data = JSON.parse(decoded) as { exp?: number };
+    const data = JSON.parse(decoded) as { exp?: number; userId?: string; role?: string };
     return typeof data.exp === "number" && data.exp > Math.floor(Date.now() / 1000) && typeof data.userId === "string" && !!data.userId && ["ADMIN", "EDITOR", "VIEWER"].includes(data.role);
   } catch {
     return false;
@@ -46,7 +46,6 @@ export async function middleware(request: NextRequest) {
   const openPath = path === "/login" || path.startsWith("/api/auth/");
   const authenticated = await validSession(request.cookies.get("wedplan_session")?.value);
   if (openPath) {
-    if (path === "/login" && authenticated) return NextResponse.redirect(new URL("/", request.url));
     return NextResponse.next();
   }
   if (!authenticated) {
