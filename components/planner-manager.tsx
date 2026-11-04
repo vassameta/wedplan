@@ -78,7 +78,7 @@ export default function PlannerManager({ kind }: { kind: Kind }) {
     fetch("/api/plans", { cache: "no-store" })
       .then(async response => { if (!response.ok) throw new Error("Gagal memuat wedding plan."); return response.json(); })
       .then((data: Plan[]) => { setPlans(data); setPlanId(data[0]?.id ?? ""); })
-      .catch(err => setError(err.message || "Gagal memuat data."))
+      .catch(err => setError(err instanceof Error ? err.message : "Gagal memuat data."))
       .finally(() => setLoading(false));
   }, []);
 
@@ -90,7 +90,7 @@ export default function PlannerManager({ kind }: { kind: Kind }) {
   }
 
   useEffect(() => {
-    loadRecords().catch(err => setError(err.message || "Gagal memuat data."));
+    loadRecords().catch(err => setError(err instanceof Error ? err.message : "Gagal memuat data."));
   }, [planId, kind]);
 
   function openNew() {
