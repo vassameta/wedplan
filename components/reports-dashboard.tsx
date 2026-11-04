@@ -26,13 +26,13 @@ export default function ReportsDashboard() {
     fetch("/api/plans", { cache: "no-store" }).then(async response => {
       if (!response.ok) throw new Error("Tidak dapat memuat wedding plan.");
       const data = await response.json(); setPlans(data); setPlanId(data[0]?.id ?? "");
-    }).catch(err => setError(err.message)).finally(() => setBusy(false));
+    }).catch(err => setError(err instanceof Error ? err.message : "Gagal memuat data.")).finally(() => setBusy(false));
   }, []);
   useEffect(() => {
     if (!planId) { setRecords([]); return; }
     fetch("/api/records?planId=" + encodeURIComponent(planId), { cache: "no-store" })
       .then(async response => { if (!response.ok) throw new Error("Tidak dapat memuat data laporan."); setRecords(await response.json()); })
-      .catch(err => setError(err.message));
+      .catch(err => setError(err instanceof Error ? err.message : "Gagal memuat data laporan."));
   }, [planId]);
   const vendors = records.filter(record => record.kind === "VENDOR");
   const guests = records.filter(record => record.kind === "GUEST");
