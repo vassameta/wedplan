@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { requireRole, requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -33,7 +33,6 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
   if (!body || typeof body.name !== "string" || !body.name.trim()) {
     return Response.json({ error: "Nama plan wajib diisi." }, { status: 400 });
   }
-
   const items = Array.isArray(body.items) ? body.items : [];
   try {
     const plan = await prisma.$transaction(async tx => {
@@ -48,28 +47,57 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
           guestCount: Math.max(0, Math.floor(Number(body.guestCount) || 0))
         }
       });
-      await tx.budgetItem.deleteMany({ where: { planId: id } });
-      if (items.length) {
-        await tx.budgetItem.createMany({
-          data: items.map((item: any) => ({
-            id: typeof item.id === "string" && item.id ? item.id : crypto.randomUUID(),
-            planId: id,
-            name: String(item.name ?? ""),
-            category: String(item.category ?? "Lain-lain"),
-            vendor: String(item.vendor ?? ""),
-            planned: Math.max(0, Number(item.planned) || 0),
-            actual: Math.max(0, Number(item.actual) || 0),
-            paymentStatus: mapStatus(String(item.paymentStatus ?? "")),
-            dueDate: String(item.dueDate ?? ""),
-            notes: String(item.notes ?? "")
-          }))
+
+      const normalizedItems = items.map((item: any) => ({
+        ...item,
+        id: typeof item.id === "string" && item.id ? item.id : crypto.randomUUID()
+      }));
+      const ids = normalizedItems.map((item: any) => item.id);
+      if (new Set(ids).size !== ids.length) throw new Error("Item budget memiliki ID duplikat.");
+      if (ids.length) await tx.budgetItem.deleteMany({ where: { planId: id, id: { notIn: ids } } });
+      else await tx.budgetItem.deleteMany({ where: { planId: id } });
+
+      const payments = await tx.plannerRecord.findMany({ where: { planId: id, kind: "PAYMENT" } });
+      for (const item of normalizedItems) {
+        const planned = Math.max(0, Number(item.planned) || 0);
+        const actualFromForm = Math.max(0, Number(item.actual) || 0);
+        const existing = await tx.budgetItem.findFirst({ where: { id: item.id, planId: id }, select: { id: true } });
+        const fields = {
+          name: String(item.name ?? ""),
+          category: String(item.category ?? "Lain-lain"),
+          vendor: String(item.vendor ?? ""),
+          planned,
+          actual: actualFromForm,
+          paymentStatus: mapStatus(String(item.paymentStatus ?? "")),
+          dueDate: String(item.dueDate ?? ""),
+          notes: String(item.notes ?? "")
+        };
+        if (existing) await tx.budgetItem.update({ where: { id: existing.id }, data: fields });
+        else await tx.budgetItem.create({ data: { id: item.id, planId: id, ...fields } });
+
+        const linkedPayments = payments.filter((payment: any) => {
+          const data = payment.data as Record<string, unknown>;
+          return data.budgetItemId === item.id;
         });
+        if (linkedPayments.length) {
+          const paidTotal = linkedPayments.reduce((sum: number, payment: any) => {
+            const data = payment.data as Record<string, unknown>;
+            return sum + Math.max(0, Number(data.amount) || 0);
+          }, 0);
+          await tx.budgetItem.update({
+            where: { id: item.id },
+            data: {
+              actual: paidTotal,
+              paymentStatus: paidTotal <= 0 ? "UNPAID" : paidTotal >= planned ? "PAID" : "DEPOSIT"
+            }
+          });
+        }
       }
       return tx.weddingPlan.findUniqueOrThrow({ where: { id }, include: { items: true } });
     });
     return Response.json(serializePlan(plan));
-  } catch {
-    return Response.json({ error: "Wedding plan tidak ditemukan atau gagal diperbarui." }, { status: 404 });
+  } catch (error) {
+    return Response.json({ error: error instanceof Error ? error.message : "Wedding plan tidak ditemukan atau gagal diperbarui." }, { status: 400 });
   }
 }
 
