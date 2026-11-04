@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/auth";
+import { requireRole, requireSession } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -22,7 +22,7 @@ async function syncPaymentTotal(tx: any, planId: string, itemId: string) {
 }
 
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
-  const denied = await requireSession();
+  const denied = await requireRole(["ADMIN", "EDITOR"]);
   if (denied) return denied;
   const { id } = await context.params;
   let body: any;
