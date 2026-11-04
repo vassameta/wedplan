@@ -17,7 +17,7 @@ function signature(payload: string) {
   return createHmac("sha256", secret()).update(payload).digest("base64url");
 }
 
-export function makeSessionToken(userId = "legacy-admin", role: WorkspaceRole = "ADMIN") {
+export function makeSessionToken(userId: string, role: WorkspaceRole) {
   const payload = Buffer.from(JSON.stringify({
     userId,
     role,
@@ -39,10 +39,9 @@ function readSession(token?: string): (SessionContext & { exp: number }) | null 
       userId?: string; role?: WorkspaceRole; exp?: number;
     };
     if (typeof parsed.exp !== "number" || parsed.exp <= Math.floor(Date.now() / 1000)) return null;
-    // Existing signed sessions from the original single-password release remain admin sessions.
-    const role = parsed.role ?? "ADMIN";
-    if (!["ADMIN", "EDITOR", "VIEWER"].includes(role)) return null;
-    return { userId: parsed.userId, role, exp: parsed.exp };
+    if (typeof parsed.userId !== "string" || !parsed.userId) return null;
+    if (!parsed.role || !["ADMIN", "EDITOR", "VIEWER"].includes(parsed.role)) return null;
+    return { userId: parsed.userId, role: parsed.role, exp: parsed.exp };
   } catch {
     return null;
   }
@@ -56,7 +55,12 @@ export async function getSessionContext(): Promise<SessionContext | null> {
   const store = await cookies();
   const session = readSession(store.get(COOKIE_NAME)?.value);
   if (!session) return null;
-  const user = await prisma.workspaceUser.findUnique({ where: { id: session.userId }, select: { id: true, role: true, isActive: true } });\n  if (!user || !user.isActive) return null;\n  return { userId: user.id, role: user.role };
+  const user = await prisma.workspaceUser.findUnique({
+    where: { id: session.userId },
+    select: { id: true, role: true, isActive: true }
+  });
+  if (!user || !user.isActive) return null;
+  return { userId: user.id, role: user.role };
 }
 
 export async function hasSession() {
