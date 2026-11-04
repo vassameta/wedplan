@@ -29,7 +29,7 @@ services:
       PORT: 3000
       HOSTNAME: 0.0.0.0
       DATABASE_URL: postgresql://${POSTGRES_USER:-wedplan}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-wedplan}?schema=public
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@wedplan.local}\n      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env}
     ports:
       - "${APP_BIND_IP:-127.0.0.1}:${APP_PORT:-3000}:3000"
