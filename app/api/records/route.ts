@@ -37,7 +37,7 @@ export async function GET(request: Request) {
   if (!planId) return Response.json({ error: "planId wajib diisi." }, { status: 400 });
   if (kind && !validKind(kind)) return Response.json({ error: "Jenis data tidak valid." }, { status: 400 });
   const records = await prisma.plannerRecord.findMany({
-    where: { planId, ...(kind ? { kind } : {}) },
+    where: { planId, ...(kind ? { kind: kind as Kind } : {}) },
     orderBy: [{ updatedAt: "desc" }]
   });
   return Response.json(records);
