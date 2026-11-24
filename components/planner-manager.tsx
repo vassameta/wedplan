@@ -24,13 +24,14 @@ const configs: Record<Kind, { title: string; eyebrow: string; description: strin
     title: "Guest list", eyebrow: "THE PEOPLE WE LOVE", description: "Kelola daftar undangan, RSVP, jumlah tamu, dan kebutuhan khusus.", singular: "tamu",
     fields: [
       { key: "name", label: "Nama tamu / keluarga", required: true },
-      { key: "group", label: "Kelompok", type: "select", options: ["Keluarga mempelai 1", "Keluarga mempelai 2", "Teman", "Kantor", "VIP", "Lainnya"] },
+      { key: "category", label: "Kategori tamu", type: "select", required: true, options: ["Keluarga", "Teman", "Kantor", "VIP", "Lainnya"] },
+      { key: "party", label: "Pihak", type: "select", required: true, options: ["CPW", "CPP"] },
       { key: "phone", label: "Nomor telepon" },
       { key: "pax", label: "Jumlah orang", type: "number" },
       { key: "invitation", label: "Undangan", type: "select", options: ["Belum dikirim", "Dikirim", "Diterima"] },
       { key: "rsvp", label: "Konfirmasi kehadiran", type: "select", options: ["Belum konfirmasi", "Hadir", "Tidak hadir", "Mungkin"] },
       { key: "meal", label: "Preferensi makanan / alergi" }, { key: "table", label: "Nomor meja" }, { key: "notes", label: "Catatan", type: "textarea" }
-    ], columns: ["name", "group", "pax", "invitation", "rsvp"]
+    ], columns: ["name", "category", "party", "pax", "invitation", "rsvp"]
   },
   TASK: {
     title: "Wedding checklist", eyebrow: "ONE STEP AT A TIME", description: "Atur pekerjaan, penanggung jawab, prioritas, dan tenggat persiapan.", singular: "task",
@@ -116,7 +117,8 @@ export default function PlannerManager({ kind }: { kind: Kind }) {
     event.preventDefault();
     if (!planId) return;
     setSaving(true); setError("");
-    const data: Record<string, unknown> = { ...form };
+    const data: Record<string, unknown> = { ...(editing?.data ?? {}), ...form };
+    if (kind === "GUEST") data.group = `${form.category ?? ""} ${form.party ?? ""}`.trim();
     for (const key of ["quote", "pax", "amount"]) if (key in data) data[key] = Number(data[key]) || 0;
     try {
       const response = await fetch(editing ? `/api/records/${editing.id}` : "/api/records", {
@@ -162,6 +164,8 @@ export default function PlannerManager({ kind }: { kind: Kind }) {
 
   function cellValue(record: RecordItem, key: string) {
     if (key === "budgetItemId") return itemOptions.find(item => item.id === record.data[key])?.name ?? "Item dihapus";
+    if (key === "category") return textValue(record.data.category ?? record.data.group);
+    if (key === "party") return textValue(record.data.party) === "—" ? "Belum diklasifikasikan" : textValue(record.data.party);
     if (["amount", "quote"].includes(key)) return money(record.data[key]);
     if (key === "dueDate" || key === "date") return textValue(record.data[key]);
     return textValue(record.data[key]);
