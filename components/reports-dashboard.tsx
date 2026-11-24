@@ -50,7 +50,7 @@ export default function ReportsDashboard() {
     const rows: unknown[][] = [["Section", "Name", "Category / Type", "Amount / Status", "Date / Contact", "Notes"]];
     active.items.forEach(item => rows.push(["Budget", item.name, item.category, item.planned, item.vendor, item.paymentStatus + " | actual " + item.actual]));
     vendors.forEach(record => rows.push(["Vendor", val(record.data,"name"), val(record.data,"category"), val(record.data,"quote"), val(record.data,"phone"), val(record.data,"status")]));
-    guests.forEach(record => rows.push(["Guest", val(record.data,"name"), val(record.data,"group"), val(record.data,"pax"), val(record.data,"phone"), val(record.data,"rsvp")]));
+    guests.forEach(record => rows.push(["Guest", val(record.data,"name"), [val(record.data,"category"), val(record.data,"party")].filter(Boolean).join(" · ") || val(record.data,"group"), val(record.data,"pax"), val(record.data,"phone"), val(record.data,"rsvp")]));
     tasks.forEach(record => rows.push(["Checklist", val(record.data,"title"), val(record.data,"category"), val(record.data,"priority"), val(record.data,"dueDate"), val(record.data,"status")]));
     payments.forEach(record => rows.push(["Payment", val(record.data,"budgetItemId"), val(record.data,"method"), val(record.data,"amount"), val(record.data,"date"), val(record.data,"notes")]));
     downloadCsv("wedplan-report-" + active.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") + ".csv", rows);
@@ -73,7 +73,7 @@ export default function ReportsDashboard() {
       <section className="report-section"><h2>Budget breakdown</h2><div className="module-table-wrap"><table className="module-table"><thead><tr><th>ITEM</th><th>KATEGORI</th><th>PLANNED</th><th>ACTUAL</th><th>STATUS</th></tr></thead><tbody>{active.items.map(item => <tr key={item.id}><td>{item.name}</td><td>{item.category}</td><td>{idr(item.planned)}</td><td>{idr(item.actual)}</td><td>{item.paymentStatus}</td></tr>)}</tbody></table></div></section>
       <section className="report-grid">
         <article className="report-section"><h2>Vendors <span>{vendors.length}</span></h2>{vendors.map(item => <p key={item.id}><b>{val(item.data,"name")}</b><small>{val(item.data,"category")} · {val(item.data,"status")}</small></p>)}</article>
-        <article className="report-section"><h2>Guests <span>{guests.length}</span></h2>{guests.map(item => <p key={item.id}><b>{val(item.data,"name")}</b><small>{val(item.data,"pax") || "1"} pax · {val(item.data,"rsvp")}</small></p>)}</article>
+        <article className="report-section"><h2>Guests <span>{guests.length}</span></h2>{guests.map(item => <p key={item.id}><b>{val(item.data,"name")}</b><small>{[val(item.data,"category") || val(item.data,"group"), val(item.data,"party")].filter(Boolean).join(" · ")} · {val(item.data,"pax") || "1"} pax · {val(item.data,"rsvp")}</small></p>)}</article>
         <article className="report-section"><h2>Checklist <span>{tasks.length}</span></h2>{tasks.map(item => <p key={item.id}><b>{val(item.data,"title")}</b><small>{val(item.data,"dueDate")} · {val(item.data,"status")}</small></p>)}</article>
         <article className="report-section"><h2>Payments <span>{payments.length}</span></h2>{payments.map(item => <p key={item.id}><b>{idr(Number(item.data.amount) || 0)}</b><small>{val(item.data,"date")} · {val(item.data,"method")}</small></p>)}</article>
       </section>
